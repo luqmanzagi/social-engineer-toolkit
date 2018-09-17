@@ -348,14 +348,38 @@ try:
                                                     ipaddr = grab_ipaddress()
 
                                 if attack_vector == "harvester" or attack_vector == "tabnabbing" or attack_vector == "webjacking":
-                                    print_info("This option is used for what IP the server will POST to.")
-                                    print_info("If you're using an external IP, use your external IP for this")
-                                    rhost = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                                    rhost.connect(('google.com', 0))
-                                    rhost.settimeout(2)
-                                    revipaddr = rhost.getsockname()[0]
-                                    ipaddr = raw_input(setprompt(["2"], "IP address for the POST back in Harvester/Tabnabbing [" + revipaddr + "]"))
-                                    if ipaddr == "": ipaddr=revipaddr
+                                    print("""
+-------------------------------------------------------------------------------
+--- * IMPORTANT * READ THIS BEFORE ENTERING IN THE IP ADDRESS * IMPORTANT * ---
+
+The way that this works is by cloning a site and looking for form fields to
+rewrite. If the POST fields are not usual methods for posting forms this 
+could fail. If it does, you can always save the HTML, rewrite the forms to
+be standard forms and use the "IMPORT" feature. Additionally, really 
+important:
+
+If you are using an EXTERNAL IP ADDRESS, you need to place the EXTERNAL
+IP address below, not your NAT address. Additionally, if you don't know
+basic networking concepts, and you have a private IP address, you will
+need to do port forwarding to your NAT IP address from your external IP
+address. A browser doesns't know how to communicate with a private IP
+address, so if you don't specify an external IP address if you are using
+this from an external perpective, it will not work. This isn't a SET issue
+this is how networking works.
+""")
+
+                                    #print_info("This option is used for what IP the server will POST to.")
+                                    #print_info("If you're using an external IP, use your external IP for this")
+                                    try:
+                                        rhost = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                                        rhost.connect(('google.com', 0))
+                                        rhost.settimeout(2)
+                                        revipaddr = rhost.getsockname()[0]
+                                        ipaddr = raw_input(setprompt(["2"], "IP address for the POST back in Harvester/Tabnabbing [" + revipaddr + "]"))
+                                        if ipaddr == "": ipaddr=revipaddr
+                                    except Exception:
+                                        rhost = raw_input("Enter the IP address for POST back in Harvester/Tabnabbing: ")
+                                        ipaddr = rhost
 
                                 if check_options("IPADDR=") != 0:
                                     ipaddr = check_options("IPADDR=")

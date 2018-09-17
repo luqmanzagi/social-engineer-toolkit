@@ -1,4 +1,38 @@
 ~~~~~~~~~~~~~~~~
+version 7.7.9
+~~~~~~~~~~~~~~~~
+
+* fix source.js not copying over when using tabnabbing
+* bump config version and add default apache dir to /var/www/html
+* fix sendmail not found on OSX when using phishing emails
+
+~~~~~~~~~~~~~~~~
+version 7.7.8
+~~~~~~~~~~~~~~~~
+
+* fix ident issue on harvester throwing templates off
+
+~~~~~~~~~~~~~~~~
+version 7.7.7
+~~~~~~~~~~~~~~~~
+
+* remove old test code
+* add better wording for templates
+* remove old templates yahoo and facebook
+* add better descriptions for using NAT/External IP addresses for credential harvester
+* fix if a custom PDF is selected, it won't default to a blank pdf
+* add user variable to harvester
+
+~~~~~~~~~~~~~~~~
+version 7.7.6
+~~~~~~~~~~~~~~~~
+
+* fix GOAT message when starting SSL server
+* fix BaseServer not being identified in import
+* fix OSX cloning for harvester (port allocation)
+* fix web server from not closing properly when using java applet attack
+
+~~~~~~~~~~~~~~~~
 version 7.7.5
 ~~~~~~~~~~~~~~~~
 

