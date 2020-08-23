@@ -14,6 +14,11 @@ import socket
 from src.core.setcore import *
 from src.core.menu import text
 
+try:
+    raw_input
+except:
+    raw_input = input
+
 ipaddr = ""
 me = mod_name()
 #
@@ -145,19 +150,6 @@ try:
                         return_continue()
                         break
 
-                # full screen attack vector
-                if attack_vector == '7':
-                    # dont need site cloner
-                    site_cloned = False
-                    # skip nat section and exit out
-                    choice3 = "-1"
-                    sys.path.append(definepath + "/src/webattack/fsattack")
-                    debug_msg(me, "importing 'src.webattack.fsaattack'", 1)
-                    try:
-                        module_reload(full)
-                    except:
-                        import full
-
                 # Web Attack menu choice 9: Return to the Previous Menu
                 if attack_vector == '99':
                     break
@@ -180,28 +172,26 @@ try:
                 #    attack_vector = "hta"
 
                 # Removed to delete MLITM
-                if attack_vector != "99999":
+                #if attack_vector != "99999":
 
-                    #
-                    # USER INPUT: SHOW WEB ATTACK VECTORS MENU    #
-                    #
+                #
+                # USER INPUT: SHOW WEB ATTACK VECTORS MENU    #
+                #
 
-                    if attack_vector != "7":
-                        debug_msg(
-                            me, "printing 'text.webattack_vectors_menu'", 5)
-                        show_webvectors_menu = create_menu(
-                            text.webattack_vectors_text, text.webattack_vectors_menu)
-                        print('  99) Return to Webattack Menu\n')
-                        choice3 = raw_input(setprompt(["2"], ""))
+                #if attack_vector != "7":
+                debug_msg(me, "printing 'text.webattack_vectors_menu'", 5)
+                show_webvectors_menu = create_menu(text.webattack_vectors_text, text.webattack_vectors_menu)
+                print('  99) Return to Webattack Menu\n')
+                choice3 = raw_input(setprompt(["2"], ""))
 
-                        if choice3 == 'exit':
-                            exit_set()
+                if choice3 == 'exit':
+                    exit_set()
 
-                        if choice3 == "99":
-                            break
+                if choice3 == "99":
+                    break
 
-                        if choice3 == "quit" or choice3 == '4':
-                            break
+                if choice3 == "quit" or choice3 == '4':
+                    break
 
                 try:
                     # write our attack vector to file to be called later
@@ -209,23 +199,20 @@ try:
 
                     # webjacking and web templates are not allowed
                     if attack_vector == "5" and choice3 == "1":
-                        print(
-                            bcolors.RED + "\n Sorry, you can't use the Web Jacking vector with Web Templates." + bcolors.ENDC)
+                        print(bcolors.RED + "\n Sorry, you can't use the Web Jacking vector with Web Templates." + bcolors.ENDC)
                         return_continue()
                         break
 
                     # if we select multiattack, web templates are not allowed
                     if attack_vector == "6" and choice3 == "1":
-                        print(
-                            bcolors.RED + "\n Sorry, you can't use the Multi-Attack vector with Web Templates." + bcolors.ENDC)
+                        print(bcolors.RED + "\n Sorry, you can't use the Multi-Attack vector with Web Templates." + bcolors.ENDC)
                         return_continue()
                         break
 
                     # if we select web template and tabnabbing, throw this
                     # error and bomb out to menu
                     if attack_vector == "4" and choice3 == "1":
-                        print(
-                            bcolors.RED + "\n Sorry, you can only use the cloner option with the tabnabbing method." + bcolors.ENDC)
+                        print(bcolors.RED + "\n Sorry, you can only use the cloner option with the tabnabbing method." + bcolors.ENDC)
                         return_continue()
                         break
 
@@ -252,10 +239,8 @@ try:
                         attack_vector = "harvester"
                         filewrite.write(attack_vector)
                         filewrite.close()
-                        print_info(
-                            "Credential harvester will allow you to utilize the clone capabilities within SET")
-                        print_info(
-                            "to harvest credentials or parameters from a website as well as place them into a report")
+                        print_info("Credential harvester will allow you to utilize the clone capabilities within SET")
+                        print_info("to harvest credentials or parameters from a website as well as place them into a report")
 
                     # specify tab nabbing attack vector
                     if attack_vector == '4':
@@ -279,7 +264,7 @@ try:
                         filewrite.close()
 
                     # hta attack vector
-                    if attack_vector == '8':
+                    if attack_vector == '7':
                         # call hta attack vector
                         attack_vector = "hta"
                         filewrite.write(attack_vector)
@@ -318,28 +303,19 @@ try:
                                                 # this part is to determine if NAT/port forwarding is used
                                                 # if it is it'll prompt for
                                                 # additional questions
-                                                print_info(
-                                                    "NAT/Port Forwarding can be used in the cases where your SET machine is")
-                                                print_info(
-                                                    "not externally exposed and may be a different IP address than your reverse listener.")
-                                                nat_or_fwd = yesno_prompt(
-                                                    '0', 'Are you using NAT/Port Forwarding [yes|no]')
+                                                print_info("NAT/Port Forwarding can be used in the cases where your SET machine is")
+                                                print_info("not externally exposed and may be a different IP address than your reverse listener.")
+                                                nat_or_fwd = yesno_prompt('0', 'Are you using NAT/Port Forwarding [yes|no]')
                                                 if nat_or_fwd == "YES":
-                                                    ipquestion = raw_input(setprompt(
-                                                        ["2"], "IP address to SET web server (this could be your external IP or hostname)"))
-
-                                                    filewrite2 = open(
-                                                        userconfigpath + "interface", "w")
-                                                    filewrite2.write(
-                                                        ipquestion)
+                                                    ipquestion = raw_input(setprompt(["2"], "IP address to SET web server (this could be your external IP or hostname)"))
+                                                    filewrite2 = open(userconfigpath + "interface", "w")
+                                                    filewrite2.write(ipquestion)
                                                     filewrite2.close()
                                                     # is your payload/listener
                                                     # on a different IP?
-                                                    natquestion = yesno_prompt(
-                                                        ["2"], "Is your payload handler (metasploit) on a different IP from your external NAT/Port FWD address [yes|no]")
+                                                    natquestion = yesno_prompt(["2"], "Is your payload handler (metasploit) on a different IP from your external NAT/Port FWD address [yes|no]")
                                                     if natquestion == 'YES':
-                                                        ipaddr = raw_input(
-                                                            setprompt(["2"], "IP address for the reverse handler (reverse payload)"))
+                                                        ipaddr = raw_input(setprompt(["2"], "IP address for the reverse handler (reverse payload)"))
                                                     if natquestion == "NO":
                                                         ipaddr = ipquestion
                                                 # if you arent using NAT/Port
@@ -368,13 +344,8 @@ this from an external perpective, it will not work. This isn't a SET issue
 this is how networking works.
 """)
 
-                                    #print_info("This option is used for what IP the server will POST to.")
-                                    #print_info("If you're using an external IP, use your external IP for this")
                                     try:
-                                        rhost = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                                        rhost.connect(('google.com', 0))
-                                        rhost.settimeout(2)
-                                        revipaddr = rhost.getsockname()[0]
+                                        revipaddr = detect_public_ip()
                                         ipaddr = raw_input(setprompt(["2"], "IP address for the POST back in Harvester/Tabnabbing [" + revipaddr + "]"))
                                         if ipaddr == "": ipaddr=revipaddr
                                     except Exception:
@@ -397,8 +368,7 @@ this is how networking works.
 
                             # get the template ready
                         sys.path.append(definepath + "/src/html/templates")
-                        debug_msg(
-                            me, "importing src.html.templates.template'", 1)
+                        debug_msg(me, "importing src.html.templates.template'", 1)
                         try:
                             module_reload(template)
                         except:
@@ -409,8 +379,7 @@ this is how networking works.
                                 # grab clientattack
                             sys.path.append(
                                 definepath + "/src/webattack/browser_exploits")
-                            debug_msg(
-                                me, "line 357: importing 'src.webattack.browser_exploits.gen_payload'", 1)
+                            debug_msg(me, "line 357: importing 'src.webattack.browser_exploits.gen_payload'", 1)
                             try:
                                 module_reload(gen_payload)
                             except:
@@ -419,8 +388,7 @@ this is how networking works.
                         # arp cache attack, will exit quickly
                         # if not in config file
                         sys.path.append(definepath + "/src/core/arp_cache")
-                        debug_msg(
-                            me, "line 364: importing 'src.core.arp_cache.arp'", 1)
+                        debug_msg(me, "line 364: importing 'src.core.arp_cache.arp'", 1)
                         try:
                             module_reload(arp)
                         except:
@@ -436,8 +404,7 @@ this is how networking works.
 
                         site_cloned = True
 
-                        debug_msg(
-                            me, "line 375: importing 'src.webattack.web_clone.cloner'", 1)
+                        debug_msg(me, "line 375: importing 'src.webattack.web_clone.cloner'", 1)
                         try:
                             module_reload(src.webattack.web_clone.cloner)
                         except:
@@ -445,11 +412,9 @@ this is how networking works.
 
                         # grab java applet attack
                         if attack_vector == "java":
-                            debug_msg(
-                                me, "importing 'src.core.payloadgen.create_payloads'", 1)
+                            debug_msg(me, "importing 'src.core.payloadgen.create_payloads'", 1)
                             try:
-                                module_reload(
-                                    src.core.payloadgen.create_payloads)
+                                module_reload(src.core.payloadgen.create_payloads)
                             except:
                                 import src.core.payloadgen.create_payloads
 
@@ -493,10 +458,8 @@ this is how networking works.
                                 update_options("ATTACK_VECTOR=HTA")
                                 gen_hta_cool_stuff()
                                 attack_vector = "hta"
-                                print_status(
-                                    "Automatically starting Apache for you...")
-                                subprocess.Popen(
-                                    "service apache2 start", shell=True).wait()
+                                print_status("Automatically starting Apache for you...")
+                                subprocess.Popen("service apache2 start", shell=True).wait()
 
                             if attack_vector != "harvester":
                                 if attack_vector != "tabnabbing":
@@ -715,19 +678,14 @@ this is how networking works.
                                 "\n1. Copy just the index.html\n2. Copy the entire folder\n\nEnter choice [1/2]: ")
                             if choice == "1" or choice == "":
                                 if os.path.isfile("%s/web_clone/index.html" % (userconfigpath)):
-                                    os.remove(
-                                        "%s/web_clone/index.html" % (userconfigpath))
-                                shutil.copyfile(
-                                    URL + "index.html", "%s/web_clone/" % (userconfigpath))
+                                    os.remove("%s/web_clone/index.html" % (userconfigpath))
+                                shutil.copyfile(URL + "index.html", "%s/web_clone/index.html" % (userconfigpath))
                             if choice == "2":
                                 if os.path.isdir(URL + "src/webattack"):
-                                    print_error(
-                                        "You cannot specify a folder in the default SET path. This goes into a loop Try something different.")
-                                    URL = raw_input(
-                                        "Enter the folder to import into SET, this CANNOT be the SET directory: ")
+                                    print_error("You cannot specify a folder in the default SET path. This goes into a loop Try something different.")
+                                    URL = raw_input("Enter the folder to import into SET, this CANNOT be the SET directory: ")
                                     if os.path.isdir(URL + "src/webattack" % (URL)):
-                                        print_error(
-                                            "You tried the same thing. Exiting now.")
+                                        print_error("You tried the same thing. Exiting now.")
                                         sys.exit()
                                 copyfolder(URL, "%s/web_clone/" % userconfigpath)
 
@@ -1209,20 +1167,8 @@ and send the QRCode via a mailer.
             except:
                 import src.powershell.powershell
 
-        # sms spoofing module option 10
-        if main_menu_choice == '10':
-
-
-            ### TEMPORARILY DISABLED
-            print_error("This module is currently disabled as spoofmytextmessage.com is currently experiencing issues. As soon as it is working again or I can rework the module, this will remain disabled.")
-            raw_input("Press {return} to connect to the main menu.")
-            #try:
-            #    module_reload(src.sms.sms)
-            #except:
-            #    import src.sms.sms
-
         # Main Menu choice 11: Third Party Modules
-        if main_menu_choice == '11':
+        if main_menu_choice == '10':
             sys.path.append(definepath + "/src/core")
             debug_msg(me, "importing 'src.core.module_handler'", 1)
             try:

@@ -12,19 +12,34 @@ import base64
 # fix for python2 to 3 compatibility
 try:
     from cStringIO import StringIO
-except NameError:
+except ImportError:
     from io import StringIO
 import email
 import email.encoders
 import email.mime.text
 import email.mime.base
-from email.MIMEMultipart import MIMEMultipart
-from email.MIMEBase import MIMEBase
-from email.MIMEText import MIMEText
+try:
+    from email.MIMEMultipart import MIMEMultipart
+except:
+    from email.mime.multipart import MIMEMultipart
+try:
+    from email.MIMEBase import MIMEBase
+except:
+    from email.mime.base import MIMEBase
+try:
+    from email.MIMEText import MIMEText
+except:
+    from email.mime.text import MIMEText
 from email.header import Header
 from email.generator import Generator
-from email import Charset
-from email import Encoders
+try:
+    from email import Charset
+except:
+    from email import charset as Charset
+try:
+    from email import Encoders
+except:
+    from email import encoders as Encoders
 
 Charset.add_charset('utf-8', Charset.BASE64, Charset.BASE64, 'utf-8')
 

